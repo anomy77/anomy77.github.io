@@ -1,0 +1,270 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SEE GPA Predictor – 2081</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg, #eef2f5);
+      color: var(--text, #000);
+      margin: 0;
+      padding: 10px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 22px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
+    }
+    input[type="number"] {
+      width: 60px;
+      padding: 4px;
+    }
+    button {
+      margin: 5px 0;
+      width: 100%;
+      padding: 10px;
+      background-color: #0077cc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .result {
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 5px;
+      margin-bottom: 10px;
+    }
+    .dark-mode {
+      --bg: #111;
+      --text: #eee;
+    }
+    #exportButtons {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 5px;
+    }
+  </style>
+</head>
+<body><h1>SEE GPA Predictor – 2081</h1><div class="btn-group">
+  <button onclick="toggleTheme()">Toggle Theme</button>
+</div><div id="exportButtons" class="btn-group">
+  <button onclick="printPage()">Print</button>
+  <button onclick="exportPDF()">Export PDF</button>
+  <button onclick="saveData()">Save</button>
+  <button onclick="loadData()">Load</button>
+</div><form id="gpaForm">
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Theory</th>
+        <th>Practical</th>
+        <th>Total</th>
+        <th>Percentage</th>
+        <th>GPA</th>
+        <th>Grade</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <button type="submit">Calculate GPA</button>
+</form>
+<div class="result" id="result"></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script>
+  const subjects = [
+    { name: "Nepali", theory: 75, practical: 25 },
+    { name: "English", theory: 75, practical: 25 },
+    { name: "Mathematics", theory: 75, practical: 25 },
+    { name: "Science", theory: 75, practical: 25 },
+    { name: "Social Studies", theory: 75, practical: 25 },
+    { name: "Health, Population & Environment", theory: 75, practical: 25 },
+    { name: "Optional Mathematics", theory: 75, practical: 25 },
+    { name: "Computer Science", theory: 50, practical: 50 },
+    { name: "Environment Science", theory: 75, practical: 25 },
+    { name: "Economics", theory: 75, practical: 25 },
+    { name: "Office Management and Accountancy", theory: 75, practical: 25 },
+    { name: "Travel and Tourism", theory: 75, practical: 25 },
+    { name: "Education", theory: 75, practical: 25 },
+    { name: "Agriculture", theory: 50, practical: 50 },
+    { name: "Principles of Accounting", theory: 75, practical: 25 },
+    { name: "Engineering Drawing", theory: 50, practical: 50 }
+  ];
+
+  function calculateGPA(marks) {
+    if (marks >= 90) return 4.0;
+    if (marks >= 80) return 3.6;
+    if (marks >= 70) return 3.2;
+    if (marks >= 60) return 2.8;
+    if (marks >= 50) return 2.4;
+    if (marks >= 40) return 2.0;
+    if (marks >= 30) return 1.6;
+    if (marks >= 20) return 1.2;
+    if (marks >= 1) return 0.8;
+    return 0.0;
+  }
+
+  function getGrade(marks) {
+    if (marks >= 90) return "A+";
+    if (marks >= 80) return "A";
+    if (marks >= 70) return "B+";
+    if (marks >= 60) return "B";
+    if (marks >= 50) return "C+";
+    if (marks >= 40) return "C";
+    if (marks >= 30) return "D+";
+    if (marks >= 20) return "D";
+    if (marks >= 1) return "E";
+    return "N";
+  }
+
+  function getRemarks(grade) {
+    return {
+      "A+": "Outstanding",
+      "A": "Excellent",
+      "B+": "Very Good",
+      "B": "Good",
+      "C+": "Satisfactory",
+      "C": "Acceptable",
+      "D+": "Partially Acceptable",
+      "D": "Insufficient",
+      "E": "Very Insufficient",
+      "N": "Absent / Null",
+      "NG": "Not Graded"
+    }[grade] || "";
+  }
+
+  const tbody = document.getElementById("tableBody");
+  subjects.forEach((subject, index) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${subject.name}</td>
+      <td><input type="number" min="0" max="${subject.theory}" id="theory-${index}"></td>
+      <td><input type="number" min="0" max="${subject.practical}" id="practical-${index}"></td>
+      <td id="total-${index}">–</td>
+      <td id="percent-${index}">–</td>
+      <td id="gpa-${index}">–</td>
+      <td id="grade-${index}">–</td>
+      <td id="remarks-${index}">–</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  document.getElementById("gpaForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    let totalGPA = 0;
+    let subjectCount = 0;
+    let totalMarks = 0;
+    let totalFullMarks = 0;
+    let hasNG = false;
+
+    subjects.forEach((subject, index) => {
+      const theoryInput = document.getElementById(`theory-${index}`).value;
+      const practicalInput = document.getElementById(`practical-${index}`).value;
+
+      if (theoryInput === "" && practicalInput === "") return;
+
+      const theory = parseFloat(theoryInput);
+      const practical = parseFloat(practicalInput);
+
+      if (isNaN(theory) || isNaN(practical)) return;
+
+      const total = theory + practical;
+      const fullMarks = subject.theory + subject.practical;
+      const percent = (total / fullMarks) * 100;
+
+      let gpa = calculateGPA(percent);
+      let grade = getGrade(percent);
+
+      if ((subject.theory === 75 && theory < 27) || (subject.theory === 50 && theory < 18)) {
+        gpa = 0.0;
+        grade = "NG";
+        hasNG = true;
+      }
+
+      document.getElementById(`total-${index}`).innerText = total;
+      document.getElementById(`percent-${index}`).innerText = percent.toFixed(2) + "%";
+      document.getElementById(`gpa-${index}`).innerText = gpa.toFixed(2);
+      document.getElementById(`grade-${index}`).innerText = grade;
+      document.getElementById(`remarks-${index}`).innerText = getRemarks(grade);
+
+      if (grade !== "NG") {
+        totalGPA += gpa;
+        subjectCount++;
+        totalMarks += total;
+        totalFullMarks += fullMarks;
+      }
+    });
+
+    const finalGPA = hasNG ? "0.00" : (subjectCount > 0 ? (totalGPA / subjectCount).toFixed(2) : "N/A");
+    const finalPercent = totalFullMarks > 0 ? (totalMarks / totalFullMarks * 100).toFixed(2) : "N/A";
+    const finalGrade = hasNG ? "NG" : getGrade(finalPercent);
+
+    document.getElementById("result").innerHTML = `
+      Predicted GPA: ${finalGPA}<br>
+      Overall Percentage: ${finalPercent}%<br>
+      Overall Grade: ${finalGrade}
+    `;
+
+    document.getElementById("exportButtons").style.display = "flex";
+  });
+
+  function printPage() {
+    window.print();
+  }
+
+  async function exportPDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+    pdf.text("SEE GPA Prediction Summary", 10, 10);
+    pdf.html(document.body, {
+      callback: function (doc) {
+        doc.save("SEE-GPA-Prediction.pdf");
+      },
+      x: 10,
+      y: 20
+    });
+  }
+
+  function saveData() {
+    const data = subjects.map((_, index) => ({
+      theory: document.getElementById(`theory-${index}`).value,
+      practical: document.getElementById(`practical-${index}`).value
+    }));
+    localStorage.setItem("seeGPAdata", JSON.stringify(data));
+    alert("Saved successfully.");
+  }
+
+  function loadData() {
+    const data = JSON.parse(localStorage.getItem("seeGPAdata") || "[]");
+    data.forEach((entry, index) => {
+      document.getElementById(`theory-${index}`).value = entry.theory || '';
+      document.getElementById(`practical-${index}`).value = entry.practical || '';
+    });
+    alert("Data loaded. Click 'Calculate GPA' to update.");
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle("dark-mode");
+  }
+</script></body>
+</html>
